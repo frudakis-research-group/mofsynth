@@ -77,7 +77,7 @@ def run(directory, supercell_limit):
         A tuple containing instances of MOF and Linkers classes, and lists of MOFs with
         faults in supercell creation and fragmentation procedures.
     """
-
+    print(f'  \033[1;32m\nSTART OF SYNTHESIZABILITY EVALUATION\033[m')
     # Create a Path object from the directory string
     user_dir_temp = Path(directory)
     user_dir = user_dir_temp.resolve()
@@ -89,58 +89,45 @@ def run(directory, supercell_limit):
     # Create the directory if it doesn't exist
     synth_folder_path.mkdir(parents=True, exist_ok=True)
     
-    # If settings file exists, read settings from there else ask for user input
-    Linkers.config_directory = root_path / "config_dir"
-    if os.path.exists(Linkers.config_directory):
-        config_file_path = Linkers.config_directory / "config.yaml"
-        Linkers.run_str, Linkers.job_sh, Linkers.opt_cycles = config_from_file(config_file_path)
-    else:
-        print(f'\033[1;31m\n No configuration file found at {Linkers.config_directory}. Aborting session... \033[m')
-        return False
-    if Linkers.run_str==None or Linkers.job_sh==None or Linkers.opt_cycles==None:
-        print('f\033[1;31m\n Error in configuration file found at {Linkers.config_directory}. Aborting session... \033[m')
-        return False
     
-    print(f'  \033[1;32m\nSTART OF SYNTHESIZABILITY EVALUATION\033[m')
+    # CONFIGURATION
+    MOF.initialize(root_path, synth_folder_path)
+    config_directory = root_path / "config_dir"
+    config_file_path = config_directory / "config.yaml"
+    result = config_from_file(config_file_path)
+    if isinstance(result, str):
+        print(f'\033[1;31m\n {result}. Aborting session... \033[m')
+        return False
+    run_str_opt, run_str_sp, job_sh_sp, job_sh_opt, opt_cycles = result
 
-    # A list of cifs from the user soecified directory
-    # cifs = [item for item in os.listdir(user_dir) if item.endswith(".cif")]
-    # for cif in cifs:
-    #     sanitized_name = re.sub(r'[^a-zA-Z0-9-_]', '_', cif[:-4])
-    #     cif_path = user_dir / cif
-    #     cif_path.rename(user_dir / sanitized_name)
-    
+    # FIND CIFS
     cifs = []
     for cif in (item for item in user_dir.iterdir() if item.suffix == ".cif"):
-        sanitized_name = re.sub(r'[^a-zA-Z0-9-_]', '_', cif.stem)  # Use .stem to get the filename without the extension
-        cif.rename(user_dir / f"{sanitized_name}.cif")  # Rename the file with the new sanitized name
+        sanitized_name = re.sub(r'[^a-zA-Z0-9-_]', '_', cif.stem)
+        cif.rename(user_dir / f"{sanitized_name}.cif")
         cifs.append(f"{sanitized_name}.cif")
-    
     if cifs == []:
         print(f"\n\033[1;31m\n WARNING: No cif was found in: {user_dir}. Aborting session... \033[m")
         return False
-    
-    MOF.initialize(root_path, synth_folder_path)
     
     
     # Start procedure for each cif
     for _, cif in enumerate(cifs):
 
         print(f'\n - \033[1;34mMOF under study: {cif[:-4]}\033[m -')
-        sanitized_name = re.sub(r'[^a-zA-Z0-9-_]', '_', cif[:-4])
 
-        # Initialize the mof name as an object of MOF class
+        # Initialize the mof name as an object of MOF class. Paths, energies etc are initialized
         mof = MOF(cif[:-4])
 
         # Check if its already initialized a MOF object. Sometimes the code may break in the middle of a run.
         # This serves as a quick way to ignore already analyzed instances.
-        final_xyz_path = mof.sp_path / "final.xyz"        
+        final_xyz_path = mof.sp_path / "xtbopt.xyz"
         if final_xyz_path.exists():
             continue
         else:
             # Copy .cif and job.sh in the mof directory
             copy(user_dir, mof.init_path, f"{mof.name}.cif")
-            copy(Linkers.config_directory, mof.sp_path, Linkers.job_sh)
+            copy(config_directory, mof.sp_path, job_sh_sp)
 
             # Create supercell, do the fragmentation, extract one linker,
             # calculate single point energy
@@ -158,10 +145,10 @@ def run(directory, supercell_limit):
             if obabel_check is False:
                 MOF.instances.pop()
                 continue            
-            sp_check, _ = mof.single_point()
+            sp_check, _ = mof.single_point(run_str_sp, job_sh_sp)
             if sp_check is False:
                 MOF.instances.pop()
-                continue 
+                continue
 
     # Find the unique linkers from the whole set of MOFs
     smiles_id_dict = MOF.find_unique_linkers()
@@ -169,7 +156,7 @@ def run(directory, supercell_limit):
     # Proceed to the optimization procedure of every linker
     for linker in Linkers.instances:
         print(f'\n - \033[1;34mLinker under optimization study: {linker.smiles_code}, of {linker.mof_name}\033[m -')
-        linker.optimize(False)
+        linker.optimize(False, config_directory, run_str_opt, job_sh_opt)
     
     # Right instances of MOF class
     with open(root_path / 'cifs.pkl', 'wb') as file:
@@ -194,7 +181,6 @@ def run(directory, supercell_limit):
             file.write(f'{key} : {value}\n')
 
     return MOF.instances, Linkers.instances, MOF.fault_fragment, MOF.fault_smiles
-
 
 
 def check_opt(directory):
@@ -245,7 +231,6 @@ def export_results(directory):
 
     results_list = MOF.analyse(cifs, linkers, converged, best_opt_energy_dict, id_smiles_dict)
 
-    # write_txt_results(results_list, MOF.results_txt_path)
     write_xlsx_results(results_list, MOF.results_xlsx_path)
 
-    return MOF.results_txt_path, MOF.results_xlsx_path
+    return MOF.results_xlsx_path

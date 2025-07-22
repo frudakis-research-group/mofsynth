@@ -18,6 +18,7 @@ from mofsynth.__cli__ import _transaction_summary, _return_cli_parser
 from mofsynth.__utils__ import command_handler
 
 def main():
+    
 
     args = _return_cli_parser().parse_args()
     _transaction_summary(args)

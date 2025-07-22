@@ -1,4 +1,7 @@
+singlepoint:
+  command: sbatch
+  file: job_sp.sh
 optimization:
   command: sbatch
-  file: synth_job.sh
+  file: job_opt.sh
   cycles: 1000

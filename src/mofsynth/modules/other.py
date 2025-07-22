@@ -6,18 +6,43 @@ import yaml
 
 def config_from_file(filepath):
     """Load and parse the YAML configuration file."""
-    with filepath.open('r') as f:
-        config = yaml.safe_load(f)
+    try:
+        with filepath.open('r') as f:
+            config = yaml.safe_load(f)
+    except FileNotFoundError:
+        return f"Config file not found at {filepath}"
+    except yaml.YAMLError as e:
+        return f"Error parsing YAML config file: {e}"
 
-    # Extract relevant fields with validation
-    run_str = config.get('optimization', {}).get('command')
-    job_sh = config.get('optimization', {}).get('file')
-    cycles = config.get('optimization', {}).get('cycles')
+    # Validate and extract optimization section
+    optimization = config.get('optimization', {})
+    run_str_opt = optimization.get('command')
+    job_sh_opt = optimization.get('file')
+    cycles = optimization.get('cycles')
+    
+    # Validate and extract singlepoint section
+    singlepoint = config.get('singlepoint', {})
+    run_str_sp = singlepoint.get('command')
+    job_sh_sp = singlepoint.get('file')
 
-    if not run_str or not job_sh or not cycles:
-        return None, None, None
+    # Validate all required fields exist and have appropriate values
+    required_fields = {
+        'optimization.command': run_str_opt,
+        'optimization.file': job_sh_opt,
+        'optimization.cycles': cycles,
+        'singlepoint.command': run_str_sp,
+        'singlepoint.file': job_sh_sp
+    }
+    
+    missing_fields = [field for field, value in required_fields.items() if not value]
+    if missing_fields:
+        return f"Missing required configuration fields: {', '.join(missing_fields)}"
+        
+    # Additional validation for cycles (should be positive integer)
+    if not isinstance(cycles, int) or cycles <= 0:
+        return f"Invalid cycles value: {cycles}. Must be a positive integer."
 
-    return run_str, job_sh, cycles
+    return run_str_sp, run_str_opt, job_sh_sp, job_sh_opt, cycles
 
 def copy(path1, path2, file_1, file_2 = None):
     
