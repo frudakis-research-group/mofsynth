@@ -29,7 +29,7 @@ It is recommended to install MOFSynth inside a virtual environment.
 ---------------------------
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 21
 
    mofid_help
    xtb_help
