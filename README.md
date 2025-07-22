@@ -3,7 +3,8 @@
 <h1 align="center">
 <!--   <img alt="Logo" src="https://raw.githubusercontent.com/livaschar/mofsynth/main/docs/source/images/final_grey-removebg-preview.png" style="width: 500px;"/> -->
 <!--   <img alt="Logo" src="https://github.com/livaschar/mofsynth/blob/main/docs/source/images/final_grey-removebg-preview.png" style="width: 500px;"/> -->
-  <img alt="Logo" src="https://github.com/livaschar/mofsynth/blob/main/docs/source/images/mofsynth_logo.svg" style="width: 500px;"/>
+<!--   <img alt="Logo" src="https://github.com/livaschar/mofsynth/blob/main/docs/source/images/mofsynth_logo.svg" style="width: 500px;"/> -->
+  <img alt="Logo" src="https://github.com/livaschar/mofsynth/blob/main/docs/source/images/synth_logo_v3.png" style="width: 500px;"/>
 </h1>
 
 <h4 align="center">
